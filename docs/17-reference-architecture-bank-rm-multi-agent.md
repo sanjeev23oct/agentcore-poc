@@ -88,6 +88,34 @@ the AG-UI flag, AgentCore proxies requests unchanged to the container (`POST /in
 `TOOL_CALL_RESULT`, `RUN_FINISHED` stream over SSE. The CopilotKit sample shows the agent pausing
 mid-run to render an input component (human-in-the-loop). Works with Strands, **LangGraph**, CrewAI.
 
+## A5. Harness vs Runtime: AWS's own comparison (key rows)
+
+AWS's *"AgentCore harness vs. Runtime"* page: Harness is *"a managed agent harness - the orchestration
+loop itself is provided, powered by Strands Agents"*; *"switching a model or adding a tool is a config
+change, not a redeploy."* Runtime is *"a serverless hosting environment. You bring agent code -
+written in any framework or no framework ... The orchestration loop is yours."* The harness *"runs
+inside Runtime"*. There is no separate Harness charge (see [03](./03-harness.md)).
+
+| Capability | Harness | Runtime (your code) |
+|---|---|---|
+| Memory, Gateway tools, MCP tools, observability, execution limits, streaming responses, outbound identity | ✅ configuration only | 🔵 you write code |
+| Inbound auth (IAM / OAuth), session isolation, VPC, versioning and endpoints | ✅ | ✅ |
+| **Choice of agent framework** (e.g. LangGraph) | ❌ No | 🔵 Yes, your code |
+| **Non-agent-loop patterns (graph, workflow style)** | ❌ No | 🔵 Yes, your code |
+| **Bidirectional streaming** | ❌ No | 🔵 Yes, your code |
+| Lifecycle hooks (e.g. allow/deny before a tool call) | 🟣 config + Lambda | 🔵 your code |
+
+**Related AWS integrations (release notes):**
+- **Step Functions + Harness**: *"run multiple harnesses in parallel or sequence, and wrap them
+  with human approval, error handling, or conditional routing steps."*
+- **Gateway Step Functions connector**: exposes state machines to agents as MCP tools. *"Your agents
+  decide when to run a workflow and what input to pass, and the state machine decides which steps run
+  and in what order."* Standard workflows record each step; task tokens support human-in-the-loop.
+- **Reachability caveat:** AWS documents Gateway **Runtime** targets and **A2A on Runtime**. As of
+  Nov 2026 we found **no documented Gateway target type or A2A endpoint specifically for a
+  harness**. A harness is invoked with its `InvokeHarness` API (directly, from a Lambda, or from Step
+  Functions). Re-check before design sign-off.
+
 ---
 
 # Part B: Recommended design (our synthesis; validate in POC)
@@ -108,35 +136,70 @@ mid-run to render an input component (human-in-the-loop). Works with Strands, **
  │            │ MCP (JWT / OBO)                                                    │
  │            ▼                                                                    │
  │ AgentCore GATEWAY  ── Policy (Cedar): which RM role/agent may call which tool   │
- │   ├─ Runtime target ─────► CRM agent        (CRM team account)                  │
- │   ├─ Runtime target ─────► Risk agent       (Risk team account)                 │
- │   ├─ Runtime target ─────► Onboarding agent (Ops account) ─► Step Functions     │
+ │   ├─ Runtime target ─────► CRM insight agent (CRM team account)                 │
+ │   ├─ Step Functions ─────► Onboarding/KYC workflow (Ops account; Harness steps) │
+ │     connector                                                                   │
  │   ├─ HTTP passthrough ───► other-department A2A agents / Copilot Studio agent  │
  │   ├─ Managed KB target ──► Bedrock Managed Knowledge Base ◄── SharePoint (ACLs) │
- │   └─ OpenAPI/Lambda/MCP ─► read-only bank APIs (Direct Connect / VPN)           │
+ │   └─ OpenAPI/Lambda/MCP ─► read-only CRM and risk platform APIs (DX / VPN)      │
  │ Registry (catalog of approved agents/tools)  Observability + Evaluations        │
  └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## B2. Key decisions and why
+## B2. Which build option for each use case
+
+**Rule: pick the least custom option that meets the need**, in this order:
+
+| Option | What it is | Choose it when |
+|---|---|---|
+| **1. No agent: a tool** | API or function exposed as a Gateway target (OpenAPI / Lambda / MCP) | The answer is a deterministic lookup or calculation. No reasoning needed |
+| **2. No custom agent: managed retrieval** | Bedrock Managed KB as a Gateway connector target ([18](./18-sharepoint-and-enterprise-knowledge.md)) | Question answering over documents, with citations and permissions |
+| **3. Workflow** | Step Functions, exposed to agents via the Gateway connector; LLM steps can be harnesses | The process is regulated or fixed-order, needs audit of each step or human approval |
+| **4. Harness** | Configuration-only agent (Strands loop managed by AWS) | A standard tool-calling assistant is enough, invoked directly or as a workflow step |
+| **5. Runtime + your code** | LangGraph / Strands / any framework on Runtime | You need graph or custom control flow, a specific framework, bidirectional streaming, AG-UI with in-flow approvals, or an A2A / Gateway Runtime-target endpoint other agents can call |
+| **6. Connect, don't build** | Existing agent reached via A2A / Gateway target | Another team already has the capability ([19](./19-interop-microsoft-copilot-and-cross-department-agents.md), [20](./20-reusability-first-department-to-enterprise.md)) |
+
+**Applied to this bank's use cases:**
+
+| Use case | Recommended option | Why (AWS facts in A5 unless noted) | Avoid |
+|---|---|---|---|
+| **RM orchestrator** (routes questions, merges answers, citations, approvals in UI) | **5. Runtime + LangGraph** | Graph/supervisor pattern and framework choice are "❌ No" on Harness; AG-UI sample with human-in-the-loop is on Runtime (A4); keeps existing LangGraph skills ([09](./09-migration-from-langgraph.md)) | Harness: can't run a graph |
+| **Client / CRM lookups** ("show client X's profile, products, last contacts") | **1. Tool** (OpenAPI/Lambda target, read-only) | Deterministic data; no LLM needed to fetch it | Building a "CRM agent" just to call one API |
+| **CRM insight agent** reused by other departments ("summarise relationship, suggest next best action") | **5. Runtime** (Strands or LangGraph), published as Gateway Runtime target / A2A | Must be callable by other agents and teams; those endpoints are documented for Runtime | Harness, *if* it must be an A2A peer or Gateway Runtime target (reachability caveat, A5) |
+| **Risk exposure / limits** | **1. Tool** for the numbers (risk platform API), plus the orchestrator to explain them | Risk figures must come from the system of record, never be computed by an LLM | Letting a model calculate exposure |
+| **Risk analysis assistant** for a single team (Q&A over risk reports plus a few tools) | **4. Harness** | Standard tool-calling loop; memory, Gateway tools, limits, observability by configuration | Custom code with no custom need |
+| **Onboarding / KYC process** | **3. Step Functions workflow**, with **Harness steps** for document reading or summarising, exposed to the orchestrator via the Gateway Step Functions connector | Ordered, auditable, human approval via task tokens; AWS FS guidance uses workflow for KYC (A1) | Letting an LLM decide the process order |
+| **Policy / product document Q&A** (SharePoint) | **2. Managed KB** via Gateway (`AgenticRetrieveStream`) | Citations and SharePoint permission filtering built in; no agent to maintain | Custom RAG pipeline or self-managed vector store |
+| **Another department's existing agent** | **6. Connect** (A2A via Gateway HTTP passthrough, or Gateway Runtime target) | Reuse, not rebuild; Gateway still governs the hop | Re-implementing their logic |
+| **RMs who work in Teams / M365 Copilot** | **6. Connect**: Copilot Studio calls your orchestrator over A2A | Documented by both vendors ([19](./19-interop-microsoft-copilot-and-cross-department-agents.md)); no second UI to build | Rebuilding the agent inside Copilot Studio |
+| **Quick internal POC** (one team, few tools) | **4. Harness** | Fastest; AWS documents export to Strands code if config becomes limiting ([03](./03-harness.md)) | Starting with a full custom build |
+| **Existing production LangGraph agent** | **5. Runtime** | Runtime is framework-agnostic; Harness is not ([05](./05-strands-vs-langgraph.md)) | Rewriting it as a Harness |
+
+**Signals a Harness agent should move to Runtime:** it needs branching or cycles beyond a tool loop,
+a specific framework, bidirectional streaming, or must be exposed as an A2A peer / Gateway Runtime
+target. AWS's documented path is export to Strands code ([03](./03-harness.md)).
+
+## B3. Key decisions and why
 
 1. **Use the graph (supervisor) pattern for the RM assistant; use the workflow pattern for
-   onboarding.** RM questions vary, so a supervisor routes to domain agents. Onboarding is a
-   regulated, ordered process, so make it a Step Functions workflow (or the KYC-style supervisor)
-   that the onboarding agent *starts and reports on*. Don't let the LLM improvise the process
-   (AWS A1/A2).
-2. **One agent per domain, owned by the domain team** (CRM, Risk, Onboarding), each on its own
-   Runtime, ideally in the team's own AWS account (AWS A3 hub-and-spoke). This avoids the "Large
+   onboarding.** RM questions vary, so a supervisor routes to domain capabilities. Onboarding is a
+   regulated, ordered process, so make it a Step Functions workflow (with Harness steps where an LLM
+   is useful) that the orchestrator starts and tracks through the Gateway Step Functions
+   connector. Don't let the LLM improvise the process (AWS A1/A2, A5).
+2. **One capability per domain, owned by the domain team** (CRM, Risk, Onboarding), ideally in the
+   team's own AWS account (AWS A3 hub-and-spoke). Each capability uses the least custom option
+   from B2: a tool where no reasoning is needed, an agent only where it is. This avoids the "Large
    Singleton" anti-pattern, keeps data in the owning account, and lets teams release
    independently.
 3. **Every hop goes through the Gateway.** Central auth, Policy, rate limits, and observability.
    Domain Runtimes accept only Gateway traffic (`allowedWorkloadConfiguration` / `aws:SourceArn`).
    New agents or tools are added as targets without redeploying the orchestrator.
 4. **Keep the orchestrator in LangGraph on Runtime** (consistent with this repo's main
-   recommendation, [README](./README.md)). Harness is not needed. Domain teams may use Strands or
-   LangGraph; A2A and Runtime targets make the framework irrelevant to the caller.
+   recommendation, [README](./README.md)). Harness can't run a graph (A5), but fits single-team
+   assistants and workflow steps (B2). Domain teams may use Strands or LangGraph; A2A and Runtime
+   targets make the framework irrelevant to the caller.
 5. **SharePoint through the Managed Knowledge Base connector with ACLs on**, exposed as a Gateway
-   connector target. The RM's verified email is injected **by code, not by the model** (see B3 and
+   connector target. The RM's verified email is injected **by code, not by the model** (see B4 and
    [doc 18](./18-sharepoint-and-enterprise-knowledge.md)).
 6. **Read and write are separate tools, and writes need approval.** For example `get_client_exposure`
    (read) and `submit_onboarding_case` (write). Writes require an explicit RM confirmation in the UI
@@ -145,7 +208,7 @@ mid-run to render an input component (human-in-the-loop). Works with Strands, **
 7. **Other departments and Microsoft agents connect over open protocols**: A2A for opaque agents
    owned by someone else, MCP for tools/data. Details in [doc 19](./19-interop-microsoft-copilot-and-cross-department-agents.md).
 
-## B3. Identity flow (the part most likely to go wrong)
+## B4. Identity flow (the part most likely to go wrong)
 
 1. RM signs in to the UI with **Entra ID**. The UI receives a JWT.
 2. Orchestrator Runtime validates the JWT (**custom JWT authorizer**, Entra discovery URL,
@@ -163,7 +226,7 @@ mid-run to render an input component (human-in-the-loop). Works with Strands, **
 5. Domain agents call their own systems with OBO tokens where the system supports per-user
    authorisation, otherwise M2M plus Policy.
 
-## B4. Data, memory and compliance
+## B5. Data, memory and compliance
 
 - **Memory namespaces per RM** (and per client if needed), so one RM's context never leaks into
   another's session. Set retention/TTL to match the bank's records policy.
@@ -181,15 +244,15 @@ mid-run to render an input component (human-in-the-loop). Works with Strands, **
   [AgentCore regions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html)
   ([08](./08-scalability-and-ops.md)).
 
-## B5. Build order (fits the POC plan in [13](./13-poc-plan.md))
+## B6. Build order (fits the POC plan in [13](./13-poc-plan.md))
 
 | Step | Deliverable | Proves |
 |---|---|---|
 | 1 | Orchestrator on Runtime + AG-UI chat UI + Entra sign-in | End-to-end identity and streaming |
 | 2 | Gateway + one read-only CRM tool (OpenAPI target) | Tool governance, Policy on RM role |
 | 3 | SharePoint Managed KB with ACLs on 1–2 sites, as Gateway target | Permission-trimmed answers with citations |
-| 4 | Split CRM and Risk into separate Runtime agents behind Gateway | Multi-agent routing, cross-account |
-| 5 | Onboarding: Step Functions workflow + write tool with UI approval | Safe actions, human-in-the-loop |
+| 4 | Add risk platform tools, and a CRM insight agent on Runtime in the CRM team's account, behind Gateway | Multi-agent routing, cross-account |
+| 5 | Onboarding: Step Functions workflow (Harness steps) via the Gateway connector + write tool with UI approval | Safe actions, human-in-the-loop |
 | 6 | One A2A integration (another department, or Copilot Studio) | Interop ([doc 19](./19-interop-microsoft-copilot-and-cross-department-agents.md)) |
 | 7 | Evaluations on a fixed RM question set; failure analysis | Accuracy baseline before pilot |
 
@@ -208,3 +271,7 @@ a domain agent being down produces a partial answer that says so instead of a gu
 - [Managed knowledge base supported regions](https://docs.aws.amazon.com/bedrock/latest/userguide/kb-managed-regions.html)
 - [Microsoft Entra ID as identity provider for AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-idp-microsoft.html)
 - [Runtime inbound and outbound auth](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-oauth.html)
+- [AgentCore harness vs. Runtime (feature grid)](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-vs-runtime.html)
+- [AgentCore release notes (Step Functions connector; Step Functions + harness)](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/release-notes.html)
+- [Invoke AgentCore harness with Step Functions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-step-functions.html)
+- [AWS Step Functions as Gateway connector target](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-step-functions.html)
