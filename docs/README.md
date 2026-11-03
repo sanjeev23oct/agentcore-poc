@@ -20,6 +20,7 @@ Research for evaluating a migration of an existing **production LangGraph agent*
 14. [13-poc-plan.md](./13-poc-plan.md) — 9-phase plan to build real evidence (not just AWS docs) against the actual LangGraph workload
 15. [14-security-incidents.md](./14-security-incidents.md) — **read before go-live:** two disclosed 2026 CVEs (AWS credential theft via Code Interpreter), a confirmation-bypass flaw, and a sandbox DNS-exfiltration finding
 16. [15-built-in-tools.md](./15-built-in-tools.md) — Code Interpreter and Browser, the hosted sandboxes; flagged as lower-confidence (primary AWS page didn't fetch cleanly)
+17. [16-context-graph-and-semantic-layer.md](./16-context-graph-and-semantic-layer.md) — context graphs, ontologies, semantic layers: Neptune (+ MCP server via Gateway), Bedrock GraphRAG, the new AWS Context service (announced Jun 2026, not GA), and AWS's ontology-driven semantic layer blueprint
 
 ## Decision table
 
