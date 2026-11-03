@@ -138,8 +138,10 @@ Curators approve before the Gateway target is created. Policy then encodes "allo
   Functions), not in a synchronous chat turn.
 - **Accountability:** when an answer combines your agent with another department's, the UI should
   show which agent produced which part (citations per agent), so errors can be routed to the owner.
-- **Prompt-injection across agents:** treat another agent's output as untrusted input. Run it
-  through Guardrails and never let it trigger write tools without RM confirmation.
+- **Prompt-injection across agents:** treat another agent's output as untrusted input and never
+  let it trigger write tools without RM confirmation. Note AWS: Guardrails content filters attached
+  to a model call *"do not evaluate tool results (`toolResult`)"*, so screen another agent's output
+  explicitly with the `ApplyGuardrail` API ([21](./21-model-choice-and-cost-controls.md)).
 
 ## Sources
 

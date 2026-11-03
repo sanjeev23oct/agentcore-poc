@@ -25,6 +25,7 @@ Research for evaluating a migration of an existing **production LangGraph agent*
 19. [18-sharepoint-and-enterprise-knowledge.md](./18-sharepoint-and-enterprise-knowledge.md) — SharePoint via Bedrock Managed Knowledge Base: Entra auth, permissions, document-level ACLs ("not a security boundary"), Gateway KB target, region limits
 20. [19-interop-microsoft-copilot-and-cross-department-agents.md](./19-interop-microsoft-copilot-and-cross-department-agents.md) — connecting Copilot Studio / M365 Copilot and other departments' agents via A2A/MCP; governance contract; risks
 21. [20-reusability-first-department-to-enterprise.md](./20-reusability-first-department-to-enterprise.md) — what the first department should turn into shared services, shared capabilities, templates, standards, and learning, so other teams can reuse it
+22. [21-model-choice-and-cost-controls.md](./21-model-choice-and-cost-controls.md) — where you can (and can't) pick a cheaper model: agent reasoning, Guardrails (tiers, no model choice), LLM-as-a-judge (custom/derived/code evaluators, sampling), Memory, KB retrieval; tiered routing and pricing tiers
 
 ## Decision table
 
