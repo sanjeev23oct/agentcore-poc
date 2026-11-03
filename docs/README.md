@@ -21,6 +21,10 @@ Research for evaluating a migration of an existing **production LangGraph agent*
 15. [14-security-incidents.md](./14-security-incidents.md) — **read before go-live:** two disclosed 2026 CVEs (AWS credential theft via Code Interpreter), a confirmation-bypass flaw, and a sandbox DNS-exfiltration finding
 16. [15-built-in-tools.md](./15-built-in-tools.md) — Code Interpreter and Browser, the hosted sandboxes; flagged as lower-confidence (primary AWS page didn't fetch cleanly)
 17. [16-context-graph-and-semantic-layer.md](./16-context-graph-and-semantic-layer.md) — context graphs, ontologies, semantic layers: Neptune (+ MCP server via Gateway), Bedrock GraphRAG, the new AWS Context service (announced Jun 2026, not GA), and AWS's ontology-driven semantic layer blueprint
+18. [17-reference-architecture-bank-rm-multi-agent.md](./17-reference-architecture-bank-rm-multi-agent.md) — **end-to-end design for a bank RM assistant**: orchestrator + CRM/Risk/Onboarding agents behind Gateway, Entra identity flow, SharePoint, approvals, build order
+19. [18-sharepoint-and-enterprise-knowledge.md](./18-sharepoint-and-enterprise-knowledge.md) — SharePoint via Bedrock Managed Knowledge Base: Entra auth, permissions, document-level ACLs ("not a security boundary"), Gateway KB target, region limits
+20. [19-interop-microsoft-copilot-and-cross-department-agents.md](./19-interop-microsoft-copilot-and-cross-department-agents.md) — connecting Copilot Studio / M365 Copilot and other departments' agents via A2A/MCP; governance contract; risks
+21. [20-reusability-first-department-to-enterprise.md](./20-reusability-first-department-to-enterprise.md) — what the first department should turn into shared services, shared capabilities, templates, standards, and learning, so other teams can reuse it
 
 ## Decision table
 
