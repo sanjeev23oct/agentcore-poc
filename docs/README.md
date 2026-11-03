@@ -17,6 +17,9 @@ Research for evaluating a migration of an existing **production LangGraph agent*
 11. [10-enterprise-best-practices.md](./10-enterprise-best-practices.md) — security, CI/CD, versioning, cost control
 12. [11-guardrails.md](./11-guardrails.md) — Bedrock Guardrails (content filtering/PII/grounding) vs. AgentCore Policy (Cedar/Dogwood tool-call authorization) — two different things both called "guardrails"
 13. [12-evaluations.md](./12-evaluations.md) — what Evaluations scores (trajectory, tool use, groundedness), online/batch/on-demand modes, the Recommendations/Insights loop, TypeScript framework support
+14. [13-poc-plan.md](./13-poc-plan.md) — 9-phase plan to build real evidence (not just AWS docs) against the actual LangGraph workload
+15. [14-security-incidents.md](./14-security-incidents.md) — **read before go-live:** two disclosed 2026 CVEs (AWS credential theft via Code Interpreter), a confirmation-bypass flaw, and a sandbox DNS-exfiltration finding
+16. [15-built-in-tools.md](./15-built-in-tools.md) — Code Interpreter and Browser, the hosted sandboxes; flagged as lower-confidence (primary AWS page didn't fetch cleanly)
 
 ## Decision table
 
@@ -37,6 +40,7 @@ Research for evaluating a migration of an existing **production LangGraph agent*
 4. **Agent Registry is a discovery/governance catalog, not a runtime hot-swap mechanism.** The actual hot-swap capability — adding/removing a tool or MCP server without redeploying the calling agent — belongs to **Gateway** (via standard MCP `tools/list` re-discovery), not Registry. Registry sits on top as an org-wide "what exists and is it approved" catalog, with Aug 2026 GA adding AWS Organizations auto-detection and cross-account RAM sharing.
 5. **Platform V2 (GA Sep 2026) is a hard requirement for interactive use cases** — V1 cold starts run 5.4–30s vs. V2's ~2s via Firecracker snapshot-restore — but V2 must be explicitly selected (V1 is still the default if `platformVersion` is omitted) and reportedly costs more per unit; this is an easy default-configuration trap to fall into during a POC-to-prod transition.
 6. **Session hard limits are real engineering constraints, not fine print**: 8-hour max session duration and 2 vCPU/8 GB per session on standard microVMs. Long-running or compute-heavy agent workloads need the newer **Instances** compute type (up to 14 days, GPU instances, your own EC2 quotas) or a redesign around resumability.
+7. **Two disclosed 2026 CVEs let attackers steal AWS credentials via Code Interpreter** (CVE-2026-12530, CVE-2026-16796 — see [14-security-incidents.md](./14-security-incidents.md)). Both are patched (SDK ≥1.18.1), but this is a young platform with an active CVE history, not a mature, battle-tested one — factor an ongoing security-patch-tracking process into the adoption cost, not just a one-time pre-launch review.
 
 ## Verification notes (fact-check pass, Nov 2026)
 
