@@ -25,6 +25,8 @@ AWS's own service description for Harness:
 
 Source: [AgentCore harness](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html)
 
+**Directly confirmed against AWS's harness-vs-runtime comparison page (Nov 2026)** — this was the one gap in the original research pass, now closed. The page's feature grid has a row literally titled "Choice of agent framework," marked `❌ No` for Harness and `🔵 Custom` for Runtime, and a second row, "Non-agent-loop patterns (graph, workflow style)," also marked `❌ No` for Harness. This is as explicit as AWS gets: Harness cannot run a different orchestration framework, and cannot run graph/workflow-style control flow (which is exactly what a LangGraph graph is) under any configuration. Source: [AgentCore harness vs. Runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-vs-runtime.html).
+
 Third-party technical analysis independently reaches the same conclusion:
 
 > "Harness does not support LangGraph... Harness if configuration is enough, Runtime if you bring your own orchestration code."

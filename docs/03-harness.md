@@ -35,7 +35,16 @@ Source: [AgentCore harness](https://docs.aws.amazon.com/bedrock-agentcore/latest
 
 ## Harness vs. Runtime — when AWS says to use which
 
-AWS maintains a dedicated comparison page title ([harness-vs-runtime.md](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-vs-runtime.html), referenced from the Harness topic list) but its content wasn't independently fetched in this research pass — the practical rule derived from the rest of the docs and third-party analysis (see [LangGraph + AWS Bedrock AgentCore (2026)](https://www.factualminds.com/blog/langgraph-aws-bedrock-agentcore-2026/)) is:
+**Verified directly against the live page (Nov 2026):** AWS's [harness-vs-runtime.md](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-vs-runtime.html) comparison page includes a feature grid with explicit rows for exactly this question. Two rows settle it without ambiguity:
+
+| Feature | Harness supported? | Runtime supported? |
+|---|---|---|
+| **Choice of agent framework** | ❌ No | 🔵 Custom (yes, with your own code) |
+| **Non-agent-loop patterns (graph, workflow style)** | ❌ No | 🔵 Custom (yes, with your own code) |
+
+AWS's own conceptual framing on that page: "AgentCore harness is a *managed agent harness* — the orchestration loop itself is provided, powered by [Strands Agents](https://strandsagents.com)... AgentCore Runtime is a *serverless hosting environment*. You bring agent code — written in any framework or no framework." This is a direct, primary-source confirmation (not inferred from release notes or third-party analysis) that Harness has no mechanism to run a LangGraph graph or any other non-Strands orchestration pattern — "graph, workflow style" is called out by name and marked unsupported.
+
+The practical rule derived from this grid and the rest of the docs and third-party analysis (see [LangGraph + AWS Bedrock AgentCore (2026)](https://www.factualminds.com/blog/langgraph-aws-bedrock-agentcore-2026/)) is:
 
 | Use Harness if... | Use Runtime directly if... |
 |---|---|
