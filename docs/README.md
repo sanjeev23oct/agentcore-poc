@@ -26,6 +26,7 @@ Research for evaluating a migration of an existing **production LangGraph agent*
 20. [19-interop-microsoft-copilot-and-cross-department-agents.md](./19-interop-microsoft-copilot-and-cross-department-agents.md) — connecting Copilot Studio / M365 Copilot and other departments' agents via A2A/MCP; governance contract; risks
 21. [20-reusability-first-department-to-enterprise.md](./20-reusability-first-department-to-enterprise.md) — what the first department should turn into shared services, shared capabilities, templates, standards, and learning, so other teams can reuse it
 22. [21-model-choice-and-cost-controls.md](./21-model-choice-and-cost-controls.md) — where you can (and can't) pick a cheaper model: agent reasoning, Guardrails (tiers, no model choice), LLM-as-a-judge (custom/derived/code evaluators, sampling), Memory, KB retrieval; tiered routing and pricing tiers
+23. [22-semantic-layer-ontology-live-projects.md](./22-semantic-layer-ontology-live-projects.md) — role of the semantic layer in agents; RDF/RDFS/OWL/SHACL/SKOS explained with a banking example; Neptune's role (stores RDF/OWL, reasoning runs externally); live projects (MUFG on Neptune + OWL + HermiT, Merck, Siemens Energy, Amazon COSMO, LinkedIn, Klarna); Context Ontology Accelerator; adoption ladder for the RM project
 
 ## Decision table
 

@@ -6,6 +6,8 @@ Builder Center (labelled as such, since those are not official docs). **Part B c
 third-party analysis and vendor opinion**, kept separate so it is never mistaken for AWS's
 position. Researched Nov 2026.
 
+**See also:** [22-semantic-layer-ontology-live-projects.md](./22-semantic-layer-ontology-live-projects.md) for the standards (RDF/RDFS/OWL/SHACL) in plain terms, named production deployments (incl. MUFG Bank on Neptune + OWL), and AWS's open-source Context Ontology Accelerator (Jul 2026).
+
 ---
 
 # Part A: From AWS
